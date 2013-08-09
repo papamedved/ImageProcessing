@@ -84,10 +84,11 @@ public class ImageProcessing_ implements PlugIn{
             IJ.log("Detected size = "+String.valueOf(calculateObjectSize(IP)));
             objectSize = calculateObjectSize(IP);
             IJ.log("Object size = "+String.valueOf(objectSize));
-            var = (int)(1.3)*getAvgOnSquare(IP, objectSize);
-            IJ.log("Var size = "+String.valueOf(var));
-            
-            //IJ.log("Object threshold = "+String.valueOf(var));
+            //var = (int)(1.3)*getAvgOnSquare(IP, objectSize);
+            //var = getAvgOnSquare(IP, 2*objectSize);
+            //IJ.log("Var size = "+String.valueOf(var));
+            var = 2*objectSize;
+            IJ.log("Object threshold = "+String.valueOf(getAvgOnSquare2(IP, objectSize,5)));
             
         
         //Определение минимума на площади AxA и добавления порога Т.
@@ -823,6 +824,37 @@ public class ImageProcessing_ implements PlugIn{
         }
         maxsq /= count; 
         return maxsq;
+    }
+    
+    public int getAvgOnSquare2(ImageProcessor ip, int sq, int th){
+        int count = 0;
+        int c = 0;
+        int avgcount=0;
+        int histogramm[] = new int[256];
+        for(int y = 0; y < ip.getHeight(); y++){
+            for(int x = 0; x < ip.getWidth(); x++){
+                
+                for(int _y = y; _y < y+sq; _y++){
+                    for(int _x = x; _x < x+sq; _x++){
+                        histogramm[ip.getPixel(_x, _y)] += 1;
+                    }
+                }
+                for(int i = 0; i <= 255; i++){
+                    if(histogramm[i] > th){
+                        count++;
+                    }
+                }
+                avgcount += count;
+                c++;
+                count = 0;
+                for(int i=0; i<256;i++){
+                    histogramm[i]=0;
+                }
+            }
+        }
+            //IJ.log("c="+String.valueOf(c));
+            //IJ.log("="+String.valueOf(c));
+        return (int)avgcount/c;
     }
     
     public ImageProcessor VariationalRange(ImageProcessor ip, int range, int threshold){
