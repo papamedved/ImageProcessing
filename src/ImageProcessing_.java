@@ -80,9 +80,13 @@ public class ImageProcessing_ implements PlugIn{
                 
             /********/
             
-            objectSize = 2 * calculateObjectSize(IP);
+            
             IJ.log("Detected size = "+String.valueOf(calculateObjectSize(IP)));
+            objectSize = 2 * calculateObjectSize(IP);
             IJ.log("Object size = "+String.valueOf(objectSize));
+            var = getAvgOnSquare(IP, objectSize);
+            IJ.log("Var size = "+String.valueOf(var));
+            
             //IJ.log("Object threshold = "+String.valueOf(var));
             
         
