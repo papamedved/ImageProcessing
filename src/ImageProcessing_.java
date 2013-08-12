@@ -88,7 +88,7 @@ public class ImageProcessing_ implements PlugIn{
             //var = getAvgOnSquare(IP, 2*objectSize);
             //IJ.log("Var size = "+String.valueOf(var));
             var = 2*objectSize;
-            IJ.log("Object threshold = "+String.valueOf(getAvgOnSquare2(IP, objectSize,5)));
+            IJ.log("Object threshold = "+String.valueOf(var));
             
         
         //Определение минимума на площади AxA и добавления порога Т.
