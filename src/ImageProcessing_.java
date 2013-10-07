@@ -172,11 +172,10 @@ public class ImageProcessing_ implements PlugIn{
             
         //Присваиваем ImagePlus ImageProcessor
         imp.setProcessor(originalIP);
-
-
         /*
-        int[] xpoints = new int[CenterObjects.size()]; 
+        int[] xpoints = new int[CenterObjects.size()];
         int[] ypoints = new int[CenterObjects.size()];
+
         for(int i = 0; i < CenterObjects.size(); i++){
             xpoints[i] = CenterObjects.get(i).x;
             ypoints[i] = CenterObjects.get(i).y;
@@ -184,9 +183,38 @@ public class ImageProcessing_ implements PlugIn{
         Roi roi = new PointRoi(xpoints, ypoints, CenterObjects.size());
         roi.setStrokeColor(Color.green); 
         Overlay overlay = new Overlay(roi); 
-        imp.setOverlay(overlay);     */
-
+        imp.setOverlay(overlay);
+        */
         //********Detect size********
+
+
+        int temp[][] = new int[originalIP.getWidth()][originalIP.getHeight()];
+
+        for (int i = 0; i < originalIP.getWidth(); i++){
+            for (int j = 0; j < originalIP.getHeight(); j++){
+                temp[i][j] = 0;
+            }
+        }
+
+        for (int i = 0; i < CenterObjects.size(); i++){
+            int maxinten =  originalIP.getPixel(CenterObjects.get(i).x,CenterObjects.get(i).y) - TH;
+            for(int x = CenterObjects.get(i).x-objectSize; x <= CenterObjects.get(i).x+objectSize;x++){
+                for (int y = CenterObjects.get(i).y-objectSize; y <= CenterObjects.get(i).y+objectSize;y++){
+                    //if(originalIP.getPixel(CenterObjects.get(i).x,CenterObjects.get(i).y) >= originalIP.getPixel(CenterObjects.get(i).x,CenterObjects.get(i).y)-TH) temp[x][y] = originalIP.getPixel(CenterObjects.get(i).x,CenterObjects.get(i).y);
+                    int pixel = originalIP.getPixel(x,y);
+                    if(pixel >= maxinten){
+                        temp[x][y] = pixel;
+                    } else {
+                        temp[x][y] = 0;
+                    }
+                }
+            }
+        }
+
+        originalIP.setIntArray(temp);
+        imp.setProcessor(originalIP);
+
+
             //Создаем точки смещения
             ArrayList<Point> vectorList = new ArrayList<>();
                 vectorList.add(new Point(-1,-1));
@@ -208,19 +236,18 @@ public class ImageProcessing_ implements PlugIn{
                 findArray[_x][_y] = i+1;
             }
 
-            //for(int iteration = 0; iteration <= 15; iteration++)
-            boolean entropia;
-            do{
-                entropia = false;
+            for(int iteration = 0; iteration <= 20; iteration++)
+            {
+
                 //Проход маски
                 for(int i = 1; i <= CenterObjects.size(); i++){
                     for(int x = 0; x < findArray.length; x++){
                         for(int y = 0; y < findArray[0].length; y++){
                             if(findArray[x][y] == i){
                                 for(int k = 0; k <= 7; k++){
-                                    if(IP.getPixel(x+vectorList.get(k).x,y+vectorList.get(k).y) > 0){
+                                    if(originalIP.getPixel(x+vectorList.get(k).x,y+vectorList.get(k).y) > 0){
                                         findPoints[x+vectorList.get(k).x][y+vectorList.get(k).y] = i;
-                                        entropia = true;
+
                                     }
                                 }
                             }
@@ -233,12 +260,28 @@ public class ImageProcessing_ implements PlugIn{
                         int j = findPoints[x][y];
                         if((j !=0) && (i == 0)){
                             findArray[x][y] = j;
+
                         }
                     }
                 }
-            }while(entropia);
-            imp.setProcessor(IP);
+            }
 
+            //Считаем размер объектов
+            int sqcount = 0;
+            double result;
+            for(int i = 1; i <= CenterObjects.size(); i++){
+                for(int x = 0; x < findArray.length; x++){
+                    for(int y = 0; y < findArray[0].length; y++){
+                        if(findArray[x][y] == i){
+                            sqcount += 1;
+                        }
+                    }
+                }
+                result = Math.sqrt(((sqcount/39))/Math.PI);
+                IJ.log("Radius "+"#"+String.valueOf(i)+" "+String.valueOf(result));
+                IJ.log("Queue "+"#"+String.valueOf(i)+" "+String.valueOf(sqcount));
+                sqcount = 0;
+            }
             ArrayToTextImage(findArray,"findArray.txt");
             /*
             IJ.log("-------------");
