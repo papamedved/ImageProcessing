@@ -278,8 +278,8 @@ public class ImageProcessing_ implements PlugIn{
                     }
                 }
                 result = Math.sqrt(((sqcount/39))/Math.PI);
-                IJ.log("Radius "+"#"+String.valueOf(i)+" "+String.valueOf(result));
-                IJ.log("Queue "+"#"+String.valueOf(i)+" "+String.valueOf(sqcount));
+                //IJ.log("Radius "+"#"+String.valueOf(i)+" "+String.valueOf(result));
+                IJ.log("Queue "+"#"+String.valueOf(i)+" "+String.valueOf(sqcount)+" px");
                 sqcount = 0;
             }
             ArrayToTextImage(findArray,"findArray.txt");
