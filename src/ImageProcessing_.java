@@ -28,7 +28,9 @@ import java.awt.Rectangle;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -47,6 +49,7 @@ public class ImageProcessing_ implements PlugIn{
         gd.addMessage("---------------------------------------------------------------------");      
         gd.addNumericField("Object size: ",15,2);
         gd.addNumericField("Object threshold: ",20,2);
+        gd.addNumericField("TH: ",10,2);
         gd.showDialog();
         
         if(gd.wasCanceled()){
@@ -59,7 +62,8 @@ public class ImageProcessing_ implements PlugIn{
         //Отступ адитивного порога
         int var = (int)gd.getNextNumber();
         
-        
+        int TH = (int)gd.getNextNumber();
+
         //Получаем изображение типа ImagePlus
         ImagePlus imp = WindowManager.getCurrentImage();
         
@@ -134,7 +138,7 @@ public class ImageProcessing_ implements PlugIn{
                     }
                     S = (double)SQ.size();
                     D = (int)Math.sqrt((S*4)/Math.PI);
-                    cooX = (int)x+D; //D/4
+                    cooX = (int)x+D; //Dmn  /4
                     cooY = (int)y+D; //D/4
                     CenterObjects.add(new Point(cooX,cooY));
                     for (int i = 0; i < AB.size(); i++){
@@ -156,12 +160,7 @@ public class ImageProcessing_ implements PlugIn{
         //Поиск максимумов для найденных объектов
         CenterObjects = getMaximums2(AllObjects, originalIP);
         IJ.log("Объектов найдено: "+String.valueOf(CenterObjects.size()));
-            
-        /****/
-        
-        Point cP = new Point();
-        cP = CenterObjects.get(0);
-        
+
         
         
         /****/
@@ -173,7 +172,9 @@ public class ImageProcessing_ implements PlugIn{
             
         //Присваиваем ImagePlus ImageProcessor
         imp.setProcessor(originalIP);
-        
+
+
+        /*
         int[] xpoints = new int[CenterObjects.size()]; 
         int[] ypoints = new int[CenterObjects.size()];
         for(int i = 0; i < CenterObjects.size(); i++){
@@ -183,9 +184,130 @@ public class ImageProcessing_ implements PlugIn{
         Roi roi = new PointRoi(xpoints, ypoints, CenterObjects.size());
         roi.setStrokeColor(Color.green); 
         Overlay overlay = new Overlay(roi); 
-        imp.setOverlay(overlay);
-        
-        
+        imp.setOverlay(overlay);     */
+
+        //********Detect size********
+            //Создаем точки смещения
+            ArrayList<Point> vectorList = new ArrayList<>();
+                vectorList.add(new Point(-1,-1));
+                vectorList.add(new Point(0,-1));
+                vectorList.add(new Point(1,-1));
+                vectorList.add(new Point(1,1));
+                vectorList.add(new Point(-1,0));
+                vectorList.add(new Point(-1,1));
+                vectorList.add(new Point(0,1));
+                vectorList.add(new Point(1,0));
+
+            //Массив площадей
+            int findArray[][] = new int[originalIP.getWidth()][originalIP.getHeight()];
+            int findPoints[][] = new int[originalIP.getWidth()][originalIP.getHeight()];
+            //Вписываем центры
+            for(int i = 0; i < CenterObjects.size(); i++){
+                int _x = CenterObjects.get(i).x;
+                int _y = CenterObjects.get(i).y;
+                findArray[_x][_y] = i+1;
+            }
+
+            //for(int iteration = 0; iteration <= 15; iteration++)
+            boolean entropia;
+            do{
+                entropia = false;
+                //Проход маски
+                for(int i = 1; i <= CenterObjects.size(); i++){
+                    for(int x = 0; x < findArray.length; x++){
+                        for(int y = 0; y < findArray[0].length; y++){
+                            if(findArray[x][y] == i){
+                                for(int k = 0; k <= 7; k++){
+                                    if(IP.getPixel(x+vectorList.get(k).x,y+vectorList.get(k).y) > 0){
+                                        findPoints[x+vectorList.get(k).x][y+vectorList.get(k).y] = i;
+                                        entropia = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                for(int x = 0; x < findArray.length; x++){
+                    for(int y = 0; y < findArray[0].length; y++){
+                        int i = findArray[x][y];
+                        int j = findPoints[x][y];
+                        if((j !=0) && (i == 0)){
+                            findArray[x][y] = j;
+                        }
+                    }
+                }
+            }while(entropia);
+            imp.setProcessor(IP);
+
+            ArrayToTextImage(findArray,"findArray.txt");
+            /*
+            IJ.log("-------------");
+            IJ.log("Intensiv: "+originalIP.getPixel(CenterObjects.get(0).x,CenterObjects.get(0).y));
+
+            int temp[][] = new int[originalIP.getWidth()][originalIP.getHeight()];
+
+            for (int i = 0; i < originalIP.getWidth(); i++){
+                for (int j = 0; j < originalIP.getHeight(); j++){
+                    temp[i][j] = 0;
+                }
+            }
+
+            for (int i = 0; i < CenterObjects.size(); i++){
+                int maxinten =  originalIP.getPixel(CenterObjects.get(i).x,CenterObjects.get(i).y) - TH;
+                for(int x = CenterObjects.get(i).x-objectSize; x <= CenterObjects.get(i).x+objectSize;x++){
+                    for (int y = CenterObjects.get(i).y-objectSize; y <= CenterObjects.get(i).y+objectSize;y++){
+                        //if(originalIP.getPixel(CenterObjects.get(i).x,CenterObjects.get(i).y) >= originalIP.getPixel(CenterObjects.get(i).x,CenterObjects.get(i).y)-TH) temp[x][y] = originalIP.getPixel(CenterObjects.get(i).x,CenterObjects.get(i).y);
+                        int pixel = originalIP.getPixel(x,y);
+                        if(pixel >= maxinten){
+                            temp[x][y] = pixel;
+                        } else {
+                            temp[x][y] = 0;
+                        }
+                    }
+                }
+            }
+
+            originalIP.setIntArray(temp);
+            imp.setProcessor(originalIP);
+            int[] xpoints = new int[CenterObjects.size()];
+            int[] ypoints = new int[CenterObjects.size()];
+            for(int i = 0; i < CenterObjects.size(); i++){
+                xpoints[i] = CenterObjects.get(i).x;
+                ypoints[i] = CenterObjects.get(i).y;
+            }
+            Roi roi = new PointRoi(xpoints, ypoints, CenterObjects.size());
+            roi.setStrokeColor(Color.green);
+            Overlay overlay = new Overlay(roi);
+            imp.setOverlay(overlay);
+
+            for (int i = 0; i < CenterObjects.size(); i++){
+                int leftEnd = 0;
+                int rightEnd = 0;
+                int tempX = CenterObjects.get(i).x;
+                int tempY = CenterObjects.get(i).y;
+                int tempCount = 0;
+                int result = 0;
+                //left
+                do{
+                    result =originalIP.getPixel(tempX,tempY);
+                    if(result != 0){
+                        leftEnd = tempX;
+                    }
+                    tempX--;
+                }while(result != 0);
+
+                //right
+                tempX = CenterObjects.get(i).x;
+                do{
+                    result =originalIP.getPixel(tempX,tempY);
+                    if(result != 0){
+                        rightEnd = tempX;
+                    }
+                    tempX++;
+                }while(result != 0);
+                IJ.log("Size "+String.valueOf(i+1)+" object: "+String.valueOf(rightEnd-leftEnd));
+            }
+            */
     }
     public int calculateObjectSize(ImageProcessor ip){
         ImageProcessor TempIP = ip.duplicate();
